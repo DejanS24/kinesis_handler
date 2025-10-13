@@ -31,18 +31,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   ],
 };
 
-/**
- * Retry a function with exponential backoff
- *
- * @param fn - Async function to retry
- * @param options - Retry configuration options
- * @returns Result of the function
- * @throws Last error if all retries fail
- */
-export async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   let lastError: Error | unknown;
   let attempt = 0;
@@ -55,7 +44,6 @@ export async function retryWithBackoff<T>(
     } catch (error) {
       lastError = error;
 
-      // Check if error is retryable
       if (!isRetryableError(error, opts.retryableErrors)) {
         logger.warn('Non-retryable error encountered', {
           error: error instanceof Error ? error.message : String(error),
@@ -64,7 +52,6 @@ export async function retryWithBackoff<T>(
         throw error;
       }
 
-      // Don't delay after last attempt
       if (attempt >= opts.maxAttempts) {
         break;
       }
@@ -92,24 +79,29 @@ export async function retryWithBackoff<T>(
 }
 
 function isRetryableError(error: unknown, retryableErrors: string[]): boolean {
-  if (error instanceof Error) {
-    // Check error name or code
-    const errorIdentifier = (error as { code?: string }).code || error.name;
-    return retryableErrors.some((retryable) => errorIdentifier.includes(retryable));
+  if (!(error instanceof Error)) return false;
+
+  if (error.name === 'SkippedRecordError') return false;
+
+  const nonRetryablePatterns = ['must be one of the following values', 'validation failed', 'invalid'];
+  const errorMessage = error.message.toLowerCase();
+  if (nonRetryablePatterns.some((pattern) => errorMessage.includes(pattern))) {
+    return false;
   }
-  return false;
+
+  const errorIdentifier = (error as { code?: string }).code || error.name;
+  if (retryableErrors.some((retryable) => errorIdentifier.includes(retryable))) {
+    return true;
+  }
+
+  // Generic errors without specific codes are retryable by default
+  return !errorIdentifier || errorIdentifier === 'Error';
 }
 
 function calculateDelay(attempt: number, options: Required<RetryOptions>): number {
-  // Calculate exponential backoff: initialDelay * (multiplier ^ (attempt - 1))
   const exponentialDelay = options.initialDelayMs * Math.pow(options.backoffMultiplier, attempt - 1);
-
-  // Cap at maxDelay
   const cappedDelay = Math.min(exponentialDelay, options.maxDelayMs);
-
-  // Add jitter: random value between -jitterFactor and +jitterFactor
   const jitter = cappedDelay * options.jitterFactor * (Math.random() * 2 - 1);
-
   return Math.floor(cappedDelay + jitter);
 }
 

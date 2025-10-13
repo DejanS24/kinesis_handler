@@ -6,6 +6,7 @@ import {
   DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Logger } from '@aws-lambda-powertools/logger';
+import { config } from '../config';
 
 const logger = new Logger({
   logLevel: 'INFO',
@@ -19,6 +20,12 @@ export interface Checkpoint {
   recordCount: number;
 }
 
+export interface ICheckpointManager {
+  saveCheckpoint(checkpoint: Checkpoint): Promise<void>;
+  getCheckpoint(shardId: string): Promise<Checkpoint | null>;
+  deleteCheckpoint(shardId: string): Promise<void>;
+}
+
 /**
  * DynamoDB-backed checkpoint manager for tracking processed Kinesis records
  *
@@ -28,14 +35,14 @@ export interface Checkpoint {
  * - timestamp (Number, TTL)
  * - recordCount (Number)
  */
-export class CheckpointManager {
+export class CheckpointManager implements ICheckpointManager {
   private client: DynamoDBDocumentClient;
   private tableName: string;
 
   constructor(tableName?: string) {
-    this.tableName = tableName || 'checkpoints';
+    this.tableName = tableName || config.aws.dynamodb.checkpointTable;
 
-    const dynamoClient = new DynamoDBClient({ region: 'eu-west' });
+    const dynamoClient = new DynamoDBClient({ region: config.aws.region });
     this.client = DynamoDBDocumentClient.from(dynamoClient);
 
     logger.info('CheckpointManager initialized', { tableName: this.tableName });
@@ -53,7 +60,7 @@ export class CheckpointManager {
           sequenceNumber: checkpoint.sequenceNumber,
           timestamp: checkpoint.timestamp,
           recordCount: checkpoint.recordCount,
-          ttl: Math.floor(Date.now() / 1000),
+          ttl: Math.floor(Date.now() / 1000) + config.storage.ttl,
         },
       });
 
@@ -133,7 +140,7 @@ export class CheckpointManager {
 /**
  * In-memory checkpoint manager for local development/testing
  */
-export class InMemoryCheckpointManager {
+export class InMemoryCheckpointManager implements ICheckpointManager {
   private checkpoints: Map<string, Checkpoint> = new Map();
 
   async saveCheckpoint(checkpoint: Checkpoint): Promise<void> {
@@ -160,6 +167,9 @@ export class InMemoryCheckpointManager {
 }
 
 // Factory function
-export function createCheckpointManager(): CheckpointManager | InMemoryCheckpointManager {
+export function createCheckpointManager(): ICheckpointManager {
+  if (config.storage.type === 'dynamodb') {
+    return new CheckpointManager();
+  }
   return new InMemoryCheckpointManager();
 }

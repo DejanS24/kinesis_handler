@@ -4,7 +4,7 @@ import {
   UserLimitNotFoundError,
   UserLimitAlreadyExistsError,
   InvalidUserLimitError,
-} from './errors';
+} from '../../types/errors';
 
 const logger = new Logger({
   logLevel: 'INFO',

@@ -5,12 +5,6 @@ const logger = new Logger({
   serviceName: 'idempotency',
 });
 
-/**
- * In-memory idempotency tracker
- * Tracks processed eventIds to prevent duplicate processing
- *
- * In production, this should be backed by DynamoDB or Redis with TTL
- */
 export class IdempotencyTracker {
   private processedEvents: Map<string, { timestamp: number; userId: string }> = new Map();
   private ttlMs: number;
@@ -18,57 +12,70 @@ export class IdempotencyTracker {
   private cleanupTimer?: NodeJS.Timeout;
 
   constructor(ttlMs = 3600000, cleanupIntervalMs = 300000) {
-    // Default: 1 hour TTL, cleanup every 5 minutes
     this.ttlMs = ttlMs;
     this.cleanupIntervalMs = cleanupIntervalMs;
     this.startCleanup();
   }
 
-  /**
-   * Check if an event has already been processed
-   */
-  isProcessed(eventId: string): boolean {
-    const entry = this.processedEvents.get(eventId);
+  private isExpired(entry: { timestamp: number; userId: string }): boolean {
+    return Date.now() - entry.timestamp > this.ttlMs;
+  }
 
-    if (!entry) {
-      return false;
-    }
-
-    // Check if entry has expired
-    const isExpired = Date.now() - entry.timestamp > this.ttlMs;
-    if (isExpired) {
-      this.processedEvents.delete(eventId);
-      return false;
-    }
-
+  private logDuplicate(eventId: string, entry: { timestamp: number; userId: string }): void {
     logger.info('Duplicate event detected', {
       eventId,
       userId: entry.userId,
       processedAt: new Date(entry.timestamp).toISOString(),
     });
+  }
 
+  isProcessed(eventId: string): boolean {
+    const entry = this.processedEvents.get(eventId);
+    if (!entry) return false;
+
+    if (this.isExpired(entry)) {
+      this.processedEvents.delete(eventId);
+      return false;
+    }
+
+    this.logDuplicate(eventId, entry);
     return true;
   }
 
-  /**
-   * Mark an event as processed
-   */
-  markProcessed(eventId: string, userId: string): void {
-    this.processedEvents.set(eventId, {
-      timestamp: Date.now(),
-      userId,
-    });
+  checkAndMarkInProgress(eventId: string, userId: string): boolean {
+    const entry = this.processedEvents.get(eventId);
 
-    logger.debug('Event marked as processed', {
+    if (entry) {
+      if (this.isExpired(entry)) {
+        this.processedEvents.delete(eventId);
+      } else {
+        this.logDuplicate(eventId, entry);
+        return false;
+      }
+    }
+
+    this.processedEvents.set(eventId, { timestamp: Date.now(), userId });
+    logger.debug('Event marked as in progress', {
       eventId,
       userId,
       totalTracked: this.processedEvents.size,
     });
+
+    return true;
   }
 
-  /**
-   * Remove expired entries periodically
-   */
+  markProcessed(eventId: string, userId: string): void {
+    this.processedEvents.set(eventId, { timestamp: Date.now(), userId });
+    logger.debug('Event marked as processed', { eventId, userId, totalTracked: this.processedEvents.size });
+  }
+
+  unmarkProcessed(eventId: string): void {
+    const existed = this.processedEvents.delete(eventId);
+    if (existed) {
+      logger.debug('Event unmarked (processing failed)', { eventId, totalTracked: this.processedEvents.size });
+    }
+  }
+
   private startCleanup(): void {
     this.cleanupTimer = setInterval(() => {
       const now = Date.now();
@@ -82,22 +89,15 @@ export class IdempotencyTracker {
       }
 
       if (cleaned > 0) {
-        logger.debug('Cleaned up expired idempotency entries', {
-          cleaned,
-          remaining: this.processedEvents.size,
-        });
+        logger.debug('Cleaned up expired idempotency entries', { cleaned, remaining: this.processedEvents.size });
       }
     }, this.cleanupIntervalMs);
 
-    // Ensure timer doesn't prevent process exit
     if (this.cleanupTimer.unref) {
       this.cleanupTimer.unref();
     }
   }
 
-  /**
-   * Stop cleanup timer (for testing/shutdown)
-   */
   stopCleanup(): void {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer);
@@ -105,9 +105,6 @@ export class IdempotencyTracker {
     }
   }
 
-  /**
-   * Get statistics
-   */
   getStats(): { trackedCount: number; oldestEntry: number | null } {
     let oldestTimestamp: number | null = null;
 
@@ -117,20 +114,13 @@ export class IdempotencyTracker {
       }
     }
 
-    return {
-      trackedCount: this.processedEvents.size,
-      oldestEntry: oldestTimestamp,
-    };
+    return { trackedCount: this.processedEvents.size, oldestEntry: oldestTimestamp };
   }
 
-  /**
-   * Clear all tracked events (for testing)
-   */
   clear(): void {
     this.processedEvents.clear();
     logger.info('Idempotency tracker cleared');
   }
 }
 
-// Singleton instance
 export const idempotencyTracker = new IdempotencyTracker();
