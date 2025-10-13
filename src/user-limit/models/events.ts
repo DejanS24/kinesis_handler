@@ -1,3 +1,5 @@
+import { LimitType } from "./user-limit";
+
 export enum EventType {
   USER_LIMIT_CREATED = 'USER_LIMIT_CREATED',
   USER_LIMIT_PROGRESS_CHANGED = 'USER_LIMIT_PROGRESS_CHANGED',
@@ -13,7 +15,7 @@ export interface BaseEvent {
 
 export interface UserLimitCreatedEvent extends BaseEvent {
   eventType: EventType.USER_LIMIT_CREATED;
-  limitType: string;
+  limitType: LimitType;
   limitAmount: number;
   periodType: 'DAY' | 'WEEK' | 'MONTH';
   startDate: string;

@@ -5,13 +5,10 @@ import {
   GetCommand,
   DeleteCommand,
 } from '@aws-sdk/lib-dynamodb';
-import { Logger } from '@aws-lambda-powertools/logger';
 import { config } from '../config';
+import { createChildLogger } from '../infrastructure/logger';
 
-const logger = new Logger({
-  logLevel: 'INFO',
-  serviceName: 'checkpointing',
-});
+const logger = createChildLogger({ service: 'checkpointing' });
 
 export interface Checkpoint {
   shardId: string;
@@ -45,7 +42,7 @@ export class CheckpointManager implements ICheckpointManager {
     const dynamoClient = new DynamoDBClient({ region: config.aws.region });
     this.client = DynamoDBDocumentClient.from(dynamoClient);
 
-    logger.info('CheckpointManager initialized', { tableName: this.tableName });
+    logger.info({ tableName: this.tableName }, 'CheckpointManager initialized');
   }
 
   /**
@@ -66,16 +63,22 @@ export class CheckpointManager implements ICheckpointManager {
 
       await this.client.send(command);
 
-      logger.info('Checkpoint saved', {
-        shardId: checkpoint.shardId,
-        sequenceNumber: checkpoint.sequenceNumber,
-        recordCount: checkpoint.recordCount,
-      });
+      logger.info(
+        {
+          shardId: checkpoint.shardId,
+          sequenceNumber: checkpoint.sequenceNumber,
+          recordCount: checkpoint.recordCount,
+        },
+        'Checkpoint saved'
+      );
     } catch (error) {
-      logger.error('Failed to save checkpoint', {
-        shardId: checkpoint.shardId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        {
+          shardId: checkpoint.shardId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Failed to save checkpoint'
+      );
       throw error;
     }
   }
@@ -93,7 +96,7 @@ export class CheckpointManager implements ICheckpointManager {
       const result = await this.client.send(command);
 
       if (!result.Item) {
-        logger.debug('No checkpoint found', { shardId });
+        logger.debug({ shardId }, 'No checkpoint found');
         return null;
       }
 
@@ -104,13 +107,16 @@ export class CheckpointManager implements ICheckpointManager {
         recordCount: result.Item.recordCount as number,
       };
 
-      logger.debug('Checkpoint retrieved', { checkpoint });
+      logger.debug({ checkpoint }, 'Checkpoint retrieved');
       return checkpoint;
     } catch (error) {
-      logger.error('Failed to get checkpoint', {
-        shardId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        {
+          shardId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Failed to get checkpoint'
+      );
       return null; // Return null instead of throwing to allow processing from beginning
     }
   }
@@ -126,12 +132,15 @@ export class CheckpointManager implements ICheckpointManager {
       });
 
       await this.client.send(command);
-      logger.info('Checkpoint deleted', { shardId });
+      logger.info({ shardId }, 'Checkpoint deleted');
     } catch (error) {
-      logger.error('Failed to delete checkpoint', {
-        shardId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error(
+        {
+          shardId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Failed to delete checkpoint'
+      );
       throw error;
     }
   }
@@ -143,22 +152,27 @@ export class CheckpointManager implements ICheckpointManager {
 export class InMemoryCheckpointManager implements ICheckpointManager {
   private checkpoints: Map<string, Checkpoint> = new Map();
 
-  async saveCheckpoint(checkpoint: Checkpoint): Promise<void> {
-    this.checkpoints.set(checkpoint.shardId, { ...checkpoint });
-    logger.info('Checkpoint saved (in-memory)', {
-      shardId: checkpoint.shardId,
-      sequenceNumber: checkpoint.sequenceNumber,
-    });
+  saveCheckpoint(checkpoint: Checkpoint): Promise<void> {
+    this.checkpoints.set(checkpoint.shardId, checkpoint);
+    logger.info(
+      {
+        shardId: checkpoint.shardId,
+        sequenceNumber: checkpoint.sequenceNumber,
+      },
+      'Checkpoint saved (in-memory)'
+    );
+    return Promise.resolve();
   }
 
-  async getCheckpoint(shardId: string): Promise<Checkpoint | null> {
+  getCheckpoint(shardId: string): Promise<Checkpoint | null> {
     const checkpoint = this.checkpoints.get(shardId);
-    return checkpoint ? { ...checkpoint } : null;
+    return Promise.resolve(checkpoint ? checkpoint : null);
   }
 
-  async deleteCheckpoint(shardId: string): Promise<void> {
+  deleteCheckpoint(shardId: string): Promise<void> {
     this.checkpoints.delete(shardId);
-    logger.info('Checkpoint deleted (in-memory)', { shardId });
+    logger.info({ shardId }, 'Checkpoint deleted (in-memory)');
+    return Promise.resolve();
   }
 
   clear(): void {

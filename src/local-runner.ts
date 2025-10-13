@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { KinesisStreamEvent, Context } from 'aws-lambda';
 import { functionHandler } from './index';
+import { logger } from './infrastructure/logger';
 
 async function runLocal(): Promise<void> {
   try {
@@ -15,7 +16,7 @@ async function runLocal(): Promise<void> {
       [key: string]: unknown;
     }>;
 
-    console.log(`Loaded ${events.length} events`);
+    logger.info({ eventCount: events.length }, `Loaded ${events.length} events`);
 
     const kinesisEvent: KinesisStreamEvent = {
       Records: events.map((event, index) => {
@@ -66,18 +67,18 @@ async function runLocal(): Promise<void> {
     };
 
     // Execute the handler
-    console.log('\n--- Starting handler execution ---\n');
+    logger.info('Starting handler execution');
     await functionHandler(kinesisEvent, context);
-    console.log(`\n--- Handler execution completed successfully ---\n`);
+    logger.info('Handler execution completed successfully');
   } catch (error) {
-    console.error('Error running local handler:', error);
+    logger.error({ error }, 'Error running local handler');
     process.exit(1);
   }
 }
 
 if (require.main === module) {
   runLocal().catch((error) => {
-    console.error('Fatal error:', error);
+    logger.error({ error }, 'Fatal error');
     process.exit(1);
   });
 }

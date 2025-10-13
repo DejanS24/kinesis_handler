@@ -31,8 +31,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
       throw new UserLimitAlreadyExistsError(userLimit.userLimitId);
     }
 
-    this.limits.set(userLimit.userLimitId, { ...userLimit });
-    this.addToUserIdIndex(userLimit.userId, userLimit.userLimitId);
+    this.limits.set(userLimit.userLimitId, userLimit);
 
     logger.info('UserLimit saved', {
       userLimitId: userLimit.userLimitId,
@@ -47,7 +46,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
 
     const limit = this.limits.get(limitId);
     logger.debug('UserLimit lookup by id', { limitId, found: !!limit });
-    return limit ? { ...limit } : null;
+    return limit ? limit : null;
   }
 
   async findByUserId(userId: string): Promise<UserLimit[]> {
@@ -64,9 +63,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     const userLimits: UserLimit[] = [];
     for (const limitId of limitIds) {
       const limit = this.limits.get(limitId);
-      if (limit) {
-        userLimits.push({ ...limit });
-      }
+      if (limit) userLimits.push(limit);
     }
 
     logger.debug('UserLimits found for user', { userId, count: userLimits.length });
@@ -83,13 +80,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
       throw new UserLimitNotFoundError(userLimit.userLimitId);
     }
 
-    const existingLimit = this.limits.get(userLimit.userLimitId);
-    if (existingLimit && existingLimit.userId !== userLimit.userId) {
-      this.removeFromUserIdIndex(existingLimit.userId, userLimit.userLimitId);
-      this.addToUserIdIndex(userLimit.userId, userLimit.userLimitId);
-    }
-
-    this.limits.set(userLimit.userLimitId, { ...userLimit });
+    this.limits.set(userLimit.userLimitId, userLimit);
 
     logger.info('UserLimit updated', {
       userLimitId: userLimit.userLimitId,
@@ -109,7 +100,6 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     }
 
     this.limits.delete(limitId);
-    this.removeFromUserIdIndex(limit.userId, limitId);
 
     logger.info('UserLimit deleted', { limitId, userId: limit.userId });
   }
@@ -120,23 +110,6 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     }
     if (!userLimit.userId || userLimit.userId.trim() === '') {
       throw new InvalidUserLimitError('userId cannot be empty');
-    }
-  }
-
-  private addToUserIdIndex(userId: string, limitId: string): void {
-    if (!this.userIdIndex.has(userId)) {
-      this.userIdIndex.set(userId, new Set());
-    }
-    this.userIdIndex.get(userId)?.add(limitId);
-  }
-
-  private removeFromUserIdIndex(userId: string, limitId: string): void {
-    const limitIds = this.userIdIndex.get(userId);
-    if (limitIds) {
-      limitIds.delete(limitId);
-      if (limitIds.size === 0) {
-        this.userIdIndex.delete(userId);
-      }
     }
   }
 }

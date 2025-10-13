@@ -1,42 +1,18 @@
-import { Logger } from '@aws-lambda-powertools/logger';
-
-const logger = new Logger({
-  logLevel: 'INFO',
-  serviceName: 'retry-utility',
-});
+import { logger } from '../infrastructure/logger';
 
 export interface RetryOptions {
   maxAttempts?: number;
-  initialDelayMs?: number;
-  maxDelayMs?: number;
-  backoffMultiplier?: number;
-  jitterFactor?: number;
-  retryableErrors?: string[];
 }
 
-const DEFAULT_OPTIONS: Required<RetryOptions> = {
-  maxAttempts: 3,
-  initialDelayMs: 100,
-  maxDelayMs: 5000,
-  backoffMultiplier: 2,
-  jitterFactor: 0.1,
-  retryableErrors: [
-    'ECONNRESET',
-    'ETIMEDOUT',
-    'ENOTFOUND',
-    'ThrottlingException',
-    'ProvisionedThroughputExceededException',
-    'RequestTimeout',
-    'ServiceUnavailable',
-  ],
-};
+const DEFAULT_MAX_ATTEMPTS = 3;
+const RETRY_DELAYS = [100, 500, 1000]; // ms for attempts 1, 2, 3
 
 export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  let lastError: Error | unknown;
+  const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+  let lastError: unknown;
   let attempt = 0;
 
-  while (attempt < opts.maxAttempts) {
+  while (attempt < maxAttempts) {
     attempt++;
 
     try {
@@ -44,50 +20,69 @@ export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOp
     } catch (error) {
       lastError = error;
 
-      if (!isRetryableError(error, opts.retryableErrors)) {
-        logger.warn('Non-retryable error encountered', {
-          error: error instanceof Error ? error.message : String(error),
-          attempt,
-        });
+      if (!isRetryableError(error)) {
+        logger.warn(
+          { error: error instanceof Error ? error.message : String(error), attempt },
+          'Non-retryable error encountered'
+        );
         throw error;
       }
 
-      if (attempt >= opts.maxAttempts) {
+      if (attempt >= maxAttempts) {
         break;
       }
 
-      const delayMs = calculateDelay(attempt, opts);
+      const delayMs = RETRY_DELAYS[attempt - 1] ?? RETRY_DELAYS[RETRY_DELAYS.length - 1];
 
-      logger.warn('Retrying after error', {
-        error: error instanceof Error ? error.message : String(error),
-        attempt,
-        nextAttempt: attempt + 1,
-        maxAttempts: opts.maxAttempts,
-        delayMs,
-      });
+      logger.warn(
+        {
+          error: error instanceof Error ? error.message : String(error),
+          attempt,
+          nextAttempt: attempt + 1,
+          maxAttempts,
+          delayMs,
+        },
+        'Retrying after error'
+      );
 
       await sleep(delayMs);
     }
   }
 
-  logger.error('All retry attempts failed', {
-    maxAttempts: opts.maxAttempts,
-    lastError: lastError instanceof Error ? lastError.message : String(lastError),
-  });
+  logger.error(
+    {
+      maxAttempts,
+      lastError: lastError instanceof Error ? lastError.message : String(lastError),
+    },
+    'All retry attempts failed'
+  );
 
   throw lastError;
 }
 
-function isRetryableError(error: unknown, retryableErrors: string[]): boolean {
+function isRetryableError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
 
+  // Don't retry skipped records
   if (error.name === 'SkippedRecordError') return false;
 
+  // Don't retry validation errors
   const nonRetryablePatterns = ['must be one of the following values', 'validation failed', 'invalid'];
   const errorMessage = error.message.toLowerCase();
   if (nonRetryablePatterns.some((pattern) => errorMessage.includes(pattern))) {
     return false;
   }
+
+  // Retry on known transient errors
+  const retryableErrors = [
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'ENOTFOUND',
+    'ThrottlingException',
+    'ProvisionedThroughputExceededException',
+    'RequestTimeout',
+    'ServiceUnavailable',
+  ];
 
   const errorIdentifier = (error as { code?: string }).code || error.name;
   if (retryableErrors.some((retryable) => errorIdentifier.includes(retryable))) {
@@ -96,13 +91,6 @@ function isRetryableError(error: unknown, retryableErrors: string[]): boolean {
 
   // Generic errors without specific codes are retryable by default
   return !errorIdentifier || errorIdentifier === 'Error';
-}
-
-function calculateDelay(attempt: number, options: Required<RetryOptions>): number {
-  const exponentialDelay = options.initialDelayMs * Math.pow(options.backoffMultiplier, attempt - 1);
-  const cappedDelay = Math.min(exponentialDelay, options.maxDelayMs);
-  const jitter = cappedDelay * options.jitterFactor * (Math.random() * 2 - 1);
-  return Math.floor(cappedDelay + jitter);
 }
 
 function sleep(ms: number): Promise<void> {

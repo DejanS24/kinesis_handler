@@ -4,7 +4,6 @@ import pLimit from 'p-limit';
 import { EventProcessor } from '../processors/event-processor';
 import { validateEvent } from '../user-limit/validation/event-schemas';
 import { getCorrelationId, createLoggingContext } from '../utils/correlation-id';
-import { metrics } from '../utils/metrics';
 import { idempotencyTracker } from '../utils/idempotency';
 import { ICheckpointManager } from '../utils/checkpointing';
 import { DLQHandler } from '../utils/dlq';
@@ -180,7 +179,6 @@ export class KinesisHandler {
         }),
         'Event validation failed, skipping'
       );
-      metrics.recordValidationError();
 
       // Unmark from idempotency (validation failures should not prevent retries)
       if (eventId) {
@@ -200,15 +198,10 @@ export class KinesisHandler {
       );
 
       try {
-        const processingStart = Date.now();
         await processor.processEvent(
           validationResult.validatedData as Record<string, unknown>,
           eventType
         );
-        const processingDuration = Date.now() - processingStart;
-
-        metrics.recordEventProcessed(eventType, correlationId);
-        metrics.recordProcessingDuration(processingDuration, eventType!);
       } catch (error) {
         if (eventId) {
           idempotencyTracker.unmarkProcessed(eventId);
