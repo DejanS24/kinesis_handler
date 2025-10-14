@@ -3,7 +3,7 @@ import { KinesisStreamEvent, Context, KinesisStreamBatchResponse } from 'aws-lam
 import { UserLimitService } from './user-limit/services/user-limit-service';
 import { createUserLimitRepository } from './user-limit/repositories/repository-factory';
 import { KinesisHandler } from './handlers/kinesis-handler';
-import { logger } from './infrastructure/logger';
+import { logger } from './utils/logger';
 import { UserLimitEventProcessor } from './processors/user-limit-event-processor';
 
 config();

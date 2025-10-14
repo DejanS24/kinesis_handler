@@ -1,6 +1,6 @@
 import { IUserLimitRepository, InMemoryUserLimitRepository } from './user-limit-repository';
 import { DynamoDBUserLimitRepository } from './dynamodb-user-limit-repository';
-import { createChildLogger } from '../../infrastructure/logger';
+import { createChildLogger } from '../../utils/logger';
 
 const logger = createChildLogger({ service: 'repository-factory' });
 
