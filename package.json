@@ -8,7 +8,6 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "start:local": "npm run build && node dist/local-runner.js",
-    "start:local:tsx": "tsx src/local-runner.ts",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .ts",
@@ -42,9 +41,7 @@
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.10.0",
-    "@aws-sdk/client-dynamodb": "^3.908.0",
     "@aws-sdk/client-sqs": "^3.600.0",
-    "@aws-sdk/lib-dynamodb": "^3.908.0",
     "aws-lambda": "^1.0.7",
     "p-limit": "^5.0.0",
     "pino": "^10.0.0",

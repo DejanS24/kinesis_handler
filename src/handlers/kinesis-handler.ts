@@ -9,13 +9,7 @@ import { ICheckpointManager } from '../utils/checkpointing';
 import { DLQHandler } from '../utils/dlq';
 import { retryWithBackoff } from '../utils/retry';
 import { logger } from '../infrastructure/logger';
-
-class SkippedRecordError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'SkippedRecordError';
-  }
-}
+import { SkippedRecordError, ProcessingError } from '../types/errors';
 
 const KINESIS_MAX_CONCURRENCY = parseInt(process.env.KINESIS_MAX_CONCURRENCY || '10', 10);
 const KINESIS_MAX_RETRIES = parseInt(process.env.KINESIS_MAX_RETRIES || '3', 10);
@@ -141,7 +135,7 @@ export class KinesisHandler {
       return {
         record,
         success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: new ProcessingError('Unknown error', error),
         correlationId,
         attemptCount: attemptCounts.current,
       };
@@ -211,7 +205,7 @@ export class KinesisHandler {
     await this.dlqHandler.sendBatchToDLQ(
       failures.map((f) => ({
         record: f.record,
-        error: f.error || new Error('Unknown error'),
+        error: f.error || new ProcessingError('Unknown error'),
         attemptCount: f.attemptCount,
         correlationId: f.correlationId,
       }))

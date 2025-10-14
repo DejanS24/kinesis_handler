@@ -2,6 +2,11 @@ import { createChildLogger } from '../../infrastructure/logger';
 import { IUserLimitRepository } from '../repositories/user-limit-repository';
 import { EventType } from '../models/events';
 import { UserLimit, LimitStatus } from '../models/user-limit';
+import {
+  UnknownEventTypeError,
+  UserLimitNotFoundError,
+  UserLimitExceededError,
+} from '../../types/errors';
 
 const logger = createChildLogger({ service: 'user-limit-service' });
 
@@ -40,23 +45,19 @@ export class UserLimitService {
         await this.handleLimitReset(event);
         break;
       default:
-        throw new Error(`Unknown event type: ${String(event.eventType)}`);
+        throw new UnknownEventTypeError(String(event.eventType));
     }
   }
 
   private async handleLimitCreated(event: ValidatedEventData): Promise<void> {
-    if (!event.userLimitId || !event.type || !event.period || !event.value) {
-      throw new Error('Missing required fields for USER_LIMIT_CREATED event');
-    }
-
     const now = Date.now();
     const userLimit: UserLimit = {
-      userLimitId: event.userLimitId,
+      userLimitId: event.userLimitId!,
       userId: event.userId,
       brandId: event.brandId || '',
-      type: event.type as UserLimit['type'],
-      period: event.period as UserLimit['period'],
-      value: event.value,
+      type: event.type! as UserLimit['type'],
+      period: event.period! as UserLimit['period'],
+      value: event.value!,
       currencyCode: event.currencyCode || 'USD',
       status: (event.status as UserLimit['status']) || LimitStatus.ACTIVE,
       activeFrom: event.activeFrom || now,
@@ -70,14 +71,10 @@ export class UserLimitService {
   }
 
   private async handleProgressChanged(event: ValidatedEventData): Promise<void> {
-    if (!event.userLimitId) {
-      throw new Error('Missing userLimitId for USER_LIMIT_PROGRESS_CHANGED event');
-    }
-
-    const existingLimit = await this.repository.findById(event.userLimitId);
+    const existingLimit = await this.repository.findById(event.userLimitId!);
 
     if (!existingLimit) {
-      throw new Error(`UserLimit with id ${event.userLimitId} not found`);
+      throw new UserLimitNotFoundError(event.userLimitId!);
     }
 
     // Extract progress from event (could be 'amount', 'previousProgress', or other field)
@@ -89,15 +86,13 @@ export class UserLimitService {
     if (progressValue > limitValue) {
       logger.warn(
         {
-          userLimitId: event.userLimitId,
+          userLimitId: event.userLimitId!,
           progress: progressValue,
           limit: limitValue,
         },
         'Progress exceeds limit amount'
       );
-      throw new Error(
-        `Progress ${progressValue} exceeds limit ${limitValue} for userLimitId ${event.userLimitId}`
-      );
+      throw new UserLimitExceededError(event.userLimitId!, progressValue, limitValue);
     }
 
     const updatedLimit: UserLimit = {
@@ -109,14 +104,10 @@ export class UserLimitService {
   }
 
   private async handleLimitReset(event: ValidatedEventData): Promise<void> {
-    if (!event.userLimitId) {
-      throw new Error('Missing userLimitId for USER_LIMIT_RESET event');
-    }
-
-    const existingLimit = await this.repository.findById(event.userLimitId);
+    const existingLimit = await this.repository.findById(event.userLimitId!);
 
     if (!existingLimit) {
-      throw new Error(`UserLimit with id ${event.userLimitId} not found`);
+      throw new UserLimitNotFoundError(event.userLimitId!);
     }
 
     const updatedLimit: UserLimit = {

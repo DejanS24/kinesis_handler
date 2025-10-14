@@ -19,8 +19,6 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async save(userLimit: UserLimit): Promise<void> {
-    this.validateUserLimit(userLimit);
-
     if (this.limits.has(userLimit.userLimitId)) {
       throw new UserLimitAlreadyExistsError(userLimit.userLimitId);
     }
@@ -81,14 +79,5 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     }
 
     this.limits.delete(limitId);
-  }
-
-  private validateUserLimit(userLimit: UserLimit): void {
-    if (!userLimit.userLimitId || userLimit.userLimitId.trim() === '') {
-      throw new InvalidUserLimitError('userLimitId cannot be empty');
-    }
-    if (!userLimit.userId || userLimit.userId.trim() === '') {
-      throw new InvalidUserLimitError('userId cannot be empty');
-    }
   }
 }
