@@ -16,8 +16,6 @@ export type RepositoryType = 'inmemory' | 'dynamodb';
 export function createUserLimitRepository(): IUserLimitRepository {
   const repositoryType = (process.env.REPOSITORY_TYPE || 'inmemory').toLowerCase() as RepositoryType;
 
-  logger.info({ repositoryType }, 'Creating UserLimitRepository');
-
   if (repositoryType === 'dynamodb') {
     const tableName = process.env.USER_LIMIT_TABLE_NAME;
     if (!tableName) {

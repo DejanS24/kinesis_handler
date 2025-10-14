@@ -1,10 +1,3 @@
-import { Logger } from '@aws-lambda-powertools/logger';
-
-const logger = new Logger({
-  logLevel: 'INFO',
-  serviceName: 'idempotency',
-});
-
 export class IdempotencyTracker {
   private processedEvents: Map<string, { timestamp: number; userId: string }> = new Map();
   private ttlMs: number;
@@ -21,14 +14,6 @@ export class IdempotencyTracker {
     return Date.now() - entry.timestamp > this.ttlMs;
   }
 
-  private logDuplicate(eventId: string, entry: { timestamp: number; userId: string }): void {
-    logger.info('Duplicate event detected', {
-      eventId,
-      userId: entry.userId,
-      processedAt: new Date(entry.timestamp).toISOString(),
-    });
-  }
-
   isProcessed(eventId: string): boolean {
     const entry = this.processedEvents.get(eventId);
     if (!entry) return false;
@@ -38,7 +23,6 @@ export class IdempotencyTracker {
       return false;
     }
 
-    this.logDuplicate(eventId, entry);
     return true;
   }
 
@@ -49,47 +33,30 @@ export class IdempotencyTracker {
       if (this.isExpired(entry)) {
         this.processedEvents.delete(eventId);
       } else {
-        this.logDuplicate(eventId, entry);
         return false;
       }
     }
 
     this.processedEvents.set(eventId, { timestamp: Date.now(), userId });
-    logger.debug('Event marked as in progress', {
-      eventId,
-      userId,
-      totalTracked: this.processedEvents.size,
-    });
-
     return true;
   }
 
   markProcessed(eventId: string, userId: string): void {
     this.processedEvents.set(eventId, { timestamp: Date.now(), userId });
-    logger.debug('Event marked as processed', { eventId, userId, totalTracked: this.processedEvents.size });
   }
 
   unmarkProcessed(eventId: string): void {
-    const existed = this.processedEvents.delete(eventId);
-    if (existed) {
-      logger.debug('Event unmarked (processing failed)', { eventId, totalTracked: this.processedEvents.size });
-    }
+    this.processedEvents.delete(eventId);
   }
 
   private startCleanup(): void {
     this.cleanupTimer = setInterval(() => {
       const now = Date.now();
-      let cleaned = 0;
 
       for (const [eventId, entry] of this.processedEvents.entries()) {
         if (now - entry.timestamp > this.ttlMs) {
           this.processedEvents.delete(eventId);
-          cleaned++;
         }
-      }
-
-      if (cleaned > 0) {
-        logger.debug('Cleaned up expired idempotency entries', { cleaned, remaining: this.processedEvents.size });
       }
     }, this.cleanupIntervalMs);
 
@@ -119,7 +86,6 @@ export class IdempotencyTracker {
 
   clear(): void {
     this.processedEvents.clear();
-    logger.info('Idempotency tracker cleared');
   }
 }
 

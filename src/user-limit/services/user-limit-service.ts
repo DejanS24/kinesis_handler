@@ -1,12 +1,9 @@
-import { Logger } from '@aws-lambda-powertools/logger';
+import { createChildLogger } from '../../infrastructure/logger';
 import { IUserLimitRepository } from '../repositories/user-limit-repository';
 import { EventType } from '../models/events';
 import { UserLimit, LimitStatus } from '../models/user-limit';
 
-const logger = new Logger({
-  logLevel: 'INFO',
-  serviceName: 'user-limit-service',
-});
+const logger = createChildLogger({ service: 'user-limit-service' });
 
 // Validated event data structure (from yup validation + actual event.json)
 interface ValidatedEventData {
@@ -32,8 +29,6 @@ export class UserLimitService {
   constructor(private repository: IUserLimitRepository) {}
 
   async processEvent(event: ValidatedEventData): Promise<void> {
-    logger.info('Processing event', { eventType: event.eventType, userId: event.userId });
-
     switch (event.eventType) {
       case EventType.USER_LIMIT_CREATED:
         await this.handleLimitCreated(event);
@@ -72,7 +67,6 @@ export class UserLimitService {
     };
 
     await this.repository.save(userLimit);
-    logger.info('User limit created', { userLimitId: userLimit.userLimitId, userId: userLimit.userId });
   }
 
   private async handleProgressChanged(event: ValidatedEventData): Promise<void> {
@@ -93,11 +87,14 @@ export class UserLimitService {
 
     // Business rule: progress cannot exceed limit
     if (progressValue > limitValue) {
-      logger.warn('Progress exceeds limit amount', {
-        userLimitId: event.userLimitId,
-        progress: progressValue,
-        limit: limitValue,
-      });
+      logger.warn(
+        {
+          userLimitId: event.userLimitId,
+          progress: progressValue,
+          limit: limitValue,
+        },
+        'Progress exceeds limit amount'
+      );
       throw new Error(
         `Progress ${progressValue} exceeds limit ${limitValue} for userLimitId ${event.userLimitId}`
       );
@@ -109,11 +106,6 @@ export class UserLimitService {
     };
 
     await this.repository.update(updatedLimit);
-    logger.info('User limit progress updated', {
-      userLimitId: event.userLimitId,
-      newProgress,
-      limitValue,
-    });
   }
 
   private async handleLimitReset(event: ValidatedEventData): Promise<void> {
@@ -135,9 +127,5 @@ export class UserLimitService {
     };
 
     await this.repository.update(updatedLimit);
-    logger.info('User limit reset', {
-      userLimitId: event.userLimitId,
-      resetReason: event.resetReason,
-    });
   }
 }

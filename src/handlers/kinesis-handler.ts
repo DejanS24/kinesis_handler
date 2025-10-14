@@ -50,7 +50,6 @@ export class KinesisHandler {
 
   async processBatch(records: KinesisStreamRecord[]): Promise<KinesisStreamBatchResponse> {
     const startTime = Date.now();
-    logger.info({ recordCount: records.length }, 'Lambda invoked');
 
     try {
       const results = await this.processBatchWithConcurrency(records);
@@ -170,8 +169,6 @@ export class KinesisHandler {
       }
     }
 
-    logger.debug(createLoggingContext(correlationId, { eventId }), 'Parsed event data');
-
     const validationResult = await validateEvent(parsedData);
 
     if (!validationResult.isValid) {
@@ -194,11 +191,6 @@ export class KinesisHandler {
     const processor = eventType && this.processors.find((p) => p.canHandle(eventType));
 
     if (processor) {
-      logger.info(
-        createLoggingContext(correlationId, { eventType, eventId }),
-        'Processing event'
-      );
-
       try {
         await processor.processEvent(
           validationResult.validatedData as Record<string, unknown>,
@@ -211,19 +203,11 @@ export class KinesisHandler {
         throw error;
       }
     } else {
-      logger.debug(
-        createLoggingContext(correlationId, {
-          eventType: validationResult.eventType,
-        }),
-        'No processor found for event type, skipping'
-      );
       throw new SkippedRecordError('No processor found for event type');
     }
   }
 
   private async handleFailures(failures: ProcessingResult[]): Promise<void> {
-    logger.info({ count: failures.length }, 'Handling failures');
-
     await this.dlqHandler.sendBatchToDLQ(
       failures.map((f) => ({
         record: f.record,
@@ -246,14 +230,6 @@ export class KinesisHandler {
         timestamp: Date.now(),
         recordCount: 1,
       });
-
-      logger.debug(
-        {
-          shardId,
-          sequenceNumber: record.kinesis.sequenceNumber,
-        },
-        'Checkpoint updated'
-      );
     } catch (error) {
       logger.warn(
         {

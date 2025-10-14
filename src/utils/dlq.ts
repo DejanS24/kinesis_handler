@@ -142,8 +142,6 @@ export class DLQHandler {
       return;
     }
 
-    logger.info({ count: failures.length }, 'Sending batch to DLQ');
-
     // Send in parallel with Promise.allSettled to not fail the whole batch
     const results = await Promise.allSettled(
       failures.map((failure) =>

@@ -1,7 +1,3 @@
-import { createChildLogger } from '../infrastructure/logger';
-
-const logger = createChildLogger({ service: 'checkpointing' });
-
 export interface Checkpoint {
   shardId: string;
   sequenceNumber: string;
@@ -23,13 +19,6 @@ export class InMemoryCheckpointManager implements ICheckpointManager {
 
   saveCheckpoint(checkpoint: Checkpoint): Promise<void> {
     this.checkpoints.set(checkpoint.shardId, checkpoint);
-    logger.info(
-      {
-        shardId: checkpoint.shardId,
-        sequenceNumber: checkpoint.sequenceNumber,
-      },
-      'Checkpoint saved (in-memory)'
-    );
     return Promise.resolve();
   }
 
@@ -40,7 +29,6 @@ export class InMemoryCheckpointManager implements ICheckpointManager {
 
   deleteCheckpoint(shardId: string): Promise<void> {
     this.checkpoints.delete(shardId);
-    logger.info({ shardId }, 'Checkpoint deleted (in-memory)');
     return Promise.resolve();
   }
 

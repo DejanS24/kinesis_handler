@@ -21,10 +21,6 @@ export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOp
       lastError = error;
 
       if (!isRetryableError(error)) {
-        logger.warn(
-          { error: error instanceof Error ? error.message : String(error), attempt },
-          'Non-retryable error encountered'
-        );
         throw error;
       }
 
@@ -33,18 +29,6 @@ export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOp
       }
 
       const delayMs = RETRY_DELAYS[attempt - 1] ?? RETRY_DELAYS[RETRY_DELAYS.length - 1];
-
-      logger.warn(
-        {
-          error: error instanceof Error ? error.message : String(error),
-          attempt,
-          nextAttempt: attempt + 1,
-          maxAttempts,
-          delayMs,
-        },
-        'Retrying after error'
-      );
-
       await sleep(delayMs);
     }
   }
