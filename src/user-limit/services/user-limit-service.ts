@@ -1,4 +1,4 @@
-import { createChildLogger } from '../../infrastructure/logger';
+import { createChildLogger } from '../../utils/logger';
 import { IUserLimitRepository } from '../repositories/user-limit-repository';
 import { EventType } from '../models/events';
 import { UserLimit, LimitStatus } from '../models/user-limit';

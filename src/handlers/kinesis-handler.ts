@@ -2,7 +2,7 @@ import { KinesisStreamRecord, KinesisStreamBatchResponse } from 'aws-lambda';
 import { Buffer } from 'buffer';
 import { EventProcessor } from '../processors/event-processor';
 import { validateEvent } from '../user-limit/validation/event-schemas';
-import { logger } from '../infrastructure/logger';
+import { logger } from '../utils/logger';
 import { SkippedRecordError, ProcessingError } from '../types/errors';
 
 export interface ProcessingResult {

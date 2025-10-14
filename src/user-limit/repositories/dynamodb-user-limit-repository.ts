@@ -1,6 +1,6 @@
 import { UserLimit } from '../models/user-limit';
 import { IUserLimitRepository } from './user-limit-repository';
-import { createChildLogger } from '../../infrastructure/logger';
+import { createChildLogger } from '../../utils/logger';
 import { NotImplementedError } from '../../types/errors';
 
 const logger = createChildLogger({ service: 'dynamodb-user-limit-repository' });
