@@ -117,4 +117,16 @@ Uses **Pino structured logging** for high performance, replacing the AWS Lambda 
 
 ## Additional Questions & Answers
 
-*To be added*
+1. Q: What did you like about the task and what didn’t? Can we improve it and how?<br />
+A: What I liked the most about this task is the focus on Kinesis, and that I had the opportunity to explore its capabilities. As the assignment scenario is matching the use cases from the actual project, it's a very nice introduction to the domain and the technology used. As for improvements, mentioning some more specific business rules in order to guide edge case resolutions could be helpful, but if the idea was to think of those independently, then it's understandable. The freedom to approach design and implementation is nice, although it resulted in some uncertainty with what I should focus on and how far to go with this task.
+2. Q: If you were asked to change it so the `UserLimit` entries are stored on a database
+with a primary goal to provide them back to the front-end for display, which one
+would you suggest and why? What sub-tasks you would see as a necessary if you
+were asked to write a story for such change?<br />
+A: The most obvious one, to suggest, is DynamoDB. 
+3. Q: What would you suggest for an API to return this data to front-end for a user? What
+would be the API signature?<br />
+A: 
+
+4. Q: How did/could you implement it so it’s possible to re-use it for other similar use
+cases?<br />
