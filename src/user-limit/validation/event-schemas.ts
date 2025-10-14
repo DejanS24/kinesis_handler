@@ -1,5 +1,6 @@
 import * as yup from 'yup';
 import { EventType } from '../models/events';
+import { ValidatedEventData } from '../../types/events';
 
 const baseEventSchema = yup.object({
   eventId: yup.string().required(),
@@ -8,8 +9,7 @@ const baseEventSchema = yup.object({
   userId: yup.string().required(),
 });
 
-export const userLimitCreatedSchema = baseEventSchema.shape({
-  eventType: yup.string().oneOf([EventType.USER_LIMIT_CREATED]).required(),
+const userLimitCreatedSchema = baseEventSchema.shape({
   userLimitId: yup.string().required(),
   type: yup.string().required(),
   period: yup.string().required(),
@@ -22,8 +22,7 @@ export const userLimitCreatedSchema = baseEventSchema.shape({
   activeUntil: yup.number().optional(),
 });
 
-export const userLimitProgressChangedSchema = baseEventSchema.shape({
-  eventType: yup.string().oneOf([EventType.USER_LIMIT_PROGRESS_CHANGED]).required(),
+const userLimitProgressChangedSchema = baseEventSchema.shape({
   userLimitId: yup.string().required(),
   amount: yup.string().required(),
   previousProgress: yup.string().optional(),
@@ -33,8 +32,7 @@ export const userLimitProgressChangedSchema = baseEventSchema.shape({
   remainingAmount: yup.string().optional(),
 });
 
-export const userLimitResetSchema = baseEventSchema.shape({
-  eventType: yup.string().oneOf([EventType.USER_LIMIT_RESET]).required(),
+const userLimitResetSchema = baseEventSchema.shape({
   userLimitId: yup.string().required(),
   type: yup.string().required(),
   period: yup.string().required(),
@@ -46,41 +44,31 @@ export const userLimitResetSchema = baseEventSchema.shape({
   unusedAmount: yup.string().optional(),
 });
 
+const schemaRegistry: Record<EventType, yup.AnyObjectSchema> = {
+  [EventType.USER_LIMIT_CREATED]: userLimitCreatedSchema,
+  [EventType.USER_LIMIT_PROGRESS_CHANGED]: userLimitProgressChangedSchema,
+  [EventType.USER_LIMIT_RESET]: userLimitResetSchema,
+};
+
 export async function validateEvent(data: unknown): Promise<{
   isValid: boolean;
   eventType?: EventType;
-  validatedData?: unknown;
+  validatedData?: ValidatedEventData;
   error?: string;
 }> {
   try {
-    // First check if it has an eventType
-    const partial = await yup
-      .object({
-        eventType: yup.string().oneOf(Object.values(EventType)).required(),
-      })
-      .validate(data, { abortEarly: false });
-
+    const partial = await baseEventSchema.validate(data, { abortEarly: false });
     const eventType = partial.eventType as EventType;
 
-    // Validate based on event type
-    let validatedData;
-    switch (eventType) {
-      case EventType.USER_LIMIT_CREATED:
-        validatedData = await userLimitCreatedSchema.validate(data, { abortEarly: false });
-        break;
-      case EventType.USER_LIMIT_PROGRESS_CHANGED:
-        validatedData = await userLimitProgressChangedSchema.validate(data, { abortEarly: false });
-        break;
-      case EventType.USER_LIMIT_RESET:
-        validatedData = await userLimitResetSchema.validate(data, { abortEarly: false });
-        break;
-      default:
-        // This should never happen due to validation above, but TypeScript doesn't know that
-        return {
-          isValid: false,
-          error: `Unknown event type: ${String(eventType)}`,
-        };
+    const schema = schemaRegistry[eventType];
+    if (!schema) {
+      return {
+        isValid: false,
+        error: `Unknown event type: ${String(eventType)}`,
+      };
     }
+
+    const validatedData = await schema.validate(data, { abortEarly: false }) as ValidatedEventData;
 
     return {
       isValid: true,
@@ -96,7 +84,7 @@ export async function validateEvent(data: unknown): Promise<{
     }
     return {
       isValid: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: (error as Error).message,
     };
   }
 }

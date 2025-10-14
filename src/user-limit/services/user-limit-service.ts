@@ -7,28 +7,9 @@ import {
   UserLimitNotFoundError,
   UserLimitExceededError,
 } from '../../types/errors';
+import { ValidatedEventData } from '../../types/events';
 
 const logger = createChildLogger({ service: 'user-limit-service' });
-
-// Validated event data structure (from yup validation + actual event.json)
-interface ValidatedEventData {
-  eventType: EventType;
-  userId: string;
-  userLimitId?: string;
-  brandId?: string;
-  type?: string;
-  period?: string;
-  value?: string;
-  currencyCode?: string;
-  status?: string;
-  activeFrom?: number;
-  nextResetTime?: number;
-  activeUntil?: number;
-  amount?: string;
-  previousProgress?: string;
-  resetReason?: string;
-  [key: string]: unknown;
-}
 
 export class UserLimitService {
   constructor(private repository: IUserLimitRepository) {}
@@ -82,7 +63,6 @@ export class UserLimitService {
     const limitValue = parseFloat(existingLimit.value);
     const progressValue = parseFloat(newProgress);
 
-    // Business rule: progress cannot exceed limit
     if (progressValue > limitValue) {
       logger.warn(
         {

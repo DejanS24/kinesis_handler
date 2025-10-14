@@ -23,10 +23,7 @@ export const functionHandler = async (
   try {
     return await kinesisHandler.processBatch(event.Records);
   } catch (error) {
-    logger.error(
-      { error: error instanceof Error ? error.message : String(error) },
-      'Fatal error in Lambda handler'
-    );
+    logger.error({ err: error }, 'Fatal error in Lambda handler');
     throw error;
   }
 };

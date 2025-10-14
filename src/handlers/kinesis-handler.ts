@@ -4,6 +4,7 @@ import { EventProcessor } from '../processors/event-processor';
 import { validateEvent } from '../user-limit/validation/event-schemas';
 import { logger } from '../utils/logger';
 import { SkippedRecordError, ProcessingError } from '../types/errors';
+import { ValidatedEventData } from '../types/events';
 
 export interface ProcessingResult {
   record: KinesisStreamRecord;
@@ -50,10 +51,7 @@ export class KinesisHandler {
         })),
       };
     } catch (error) {
-      logger.error(
-        { error: error instanceof Error ? error.message : String(error) },
-        'Fatal error in batch processing'
-      );
+      logger.error({ err: (error as Error).message }, 'Fatal error in batch processing');
       throw error;
     }
   }
@@ -87,8 +85,7 @@ export class KinesisHandler {
       }
 
       await processor.processEvent(
-        validationResult.validatedData as Record<string, unknown>,
-        eventType
+        validationResult.validatedData as ValidatedEventData
       );
 
       logger.debug({ sequenceNumber, eventType }, 'Record processed successfully');
@@ -99,18 +96,12 @@ export class KinesisHandler {
         return { record, success: true };
       }
 
-      logger.error(
-        {
-          sequenceNumber,
-          error: error instanceof Error ? error.message : String(error),
-        },
-        'Record processing failed'
-      );
+      logger.error({ sequenceNumber, err: (error as Error).message }, 'Record processing failed');
 
       return {
         record,
         success: false,
-        error: error instanceof Error ? error : new ProcessingError('Unknown error', error),
+        error: new ProcessingError('Unknown error', error),
       };
     }
   }

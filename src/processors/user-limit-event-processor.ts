@@ -1,6 +1,7 @@
 import { EventProcessor } from './event-processor';
 import { UserLimitService } from '../user-limit/services/user-limit-service';
 import { EventType } from '../user-limit/models/events';
+import { ValidatedEventData } from '../types/events';
 
 export class UserLimitEventProcessor implements EventProcessor {
   private readonly supportedEventTypes = [
@@ -15,10 +16,7 @@ export class UserLimitEventProcessor implements EventProcessor {
     return this.supportedEventTypes.includes(eventType as EventType);
   }
 
-  async processEvent(event: Record<string, unknown>, eventType: string): Promise<void> {
-    await this.userLimitService.processEvent({
-      ...event,
-      eventType: eventType as EventType,
-    } as Record<string, unknown> & { eventType: EventType; userId: string });
+  async processEvent(event: ValidatedEventData): Promise<void> {
+    await this.userLimitService.processEvent(event);
   }
 }
