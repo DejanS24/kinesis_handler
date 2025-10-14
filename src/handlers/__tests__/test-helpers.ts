@@ -1,7 +1,5 @@
 import { KinesisStreamRecord } from 'aws-lambda';
 import { vi } from 'vitest';
-import { ICheckpointManager, Checkpoint } from '../../utils/checkpointing';
-import { DLQHandler } from '../../utils/dlq';
 import { UserLimitService } from '../../user-limit/services/user-limit-service';
 import { EventType } from '../../user-limit/models/events';
 import { EventProcessor } from '../../processors/event-processor';
@@ -99,55 +97,6 @@ export function createMockKinesisRecords(count: number): KinesisStreamRecord[] {
 }
 
 /**
- * Mock checkpoint manager
- */
-export function createMockCheckpointManager(): {
-  mock: ICheckpointManager;
-  saveCheckpoint: ReturnType<typeof vi.fn>;
-  getCheckpoint: ReturnType<typeof vi.fn>;
-  deleteCheckpoint: ReturnType<typeof vi.fn>;
-} {
-  const saveCheckpoint = vi.fn().mockResolvedValue(undefined);
-  const getCheckpoint = vi.fn().mockResolvedValue(null);
-  const deleteCheckpoint = vi.fn().mockResolvedValue(undefined);
-
-  return {
-    mock: {
-      saveCheckpoint,
-      getCheckpoint,
-      deleteCheckpoint,
-    },
-    saveCheckpoint,
-    getCheckpoint,
-    deleteCheckpoint,
-  };
-}
-
-/**
- * Mock DLQ handler
- */
-export function createMockDLQHandler(): {
-  mock: DLQHandler;
-  sendToDLQ: ReturnType<typeof vi.fn>;
-  sendBatchToDLQ: ReturnType<typeof vi.fn>;
-} {
-  const sendToDLQ = vi.fn().mockResolvedValue(undefined);
-  const sendBatchToDLQ = vi.fn().mockResolvedValue(undefined);
-
-  // Create partial mock (only mock the methods we need)
-  const mock = {
-    sendToDLQ,
-    sendBatchToDLQ,
-  } as unknown as DLQHandler;
-
-  return {
-    mock,
-    sendToDLQ,
-    sendBatchToDLQ,
-  };
-}
-
-/**
  * Mock UserLimitService
  */
 export function createMockUserLimitService(): {
@@ -202,17 +151,6 @@ export function createFailingUserLimitService(
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Get checkpoint from mock calls
- */
-export function getCheckpointFromCalls(
-  saveCheckpoint: ReturnType<typeof vi.fn>
-): Checkpoint | undefined {
-  const calls = saveCheckpoint.mock.calls;
-  if (calls.length === 0) return undefined;
-  return calls[calls.length - 1][0] as Checkpoint;
 }
 
 /**
