@@ -54,4 +54,34 @@ describe('KinesisHandler - Batch Processing', () => {
       { itemIdentifier: '4' },
     ]);
   });
+
+  it('should process large batches correctly', async () => {
+    const records = createMockKinesisRecords(100);
+
+    const result = await handler.processBatch(records);
+
+    expect(mockProcessors.userLimitService.processEvent).toHaveBeenCalledTimes(100);
+    expect(result.batchItemFailures).toEqual([]);
+  });
+
+  it('should handle empty batch', async () => {
+    const records: KinesisStreamRecord[] = [];
+
+    const result = await handler.processBatch(records);
+
+    expect(result.batchItemFailures).toEqual([]);
+    expect(mockProcessors.userLimitService.processEvent).not.toHaveBeenCalled();
+  });
+
+  it('should process records with different event types', async () => {
+    const records = [
+      createMockKinesisRecord(0, { eventType: EventType.USER_LIMIT_CREATED }),
+      createMockKinesisRecord(1, { eventType: EventType.USER_LIMIT_PROGRESS_CHANGED }),
+      createMockKinesisRecord(2, { eventType: EventType.USER_LIMIT_RESET }),
+    ];
+
+    await handler.processBatch(records);
+
+    expect(mockProcessors.userLimitService.processEvent).toHaveBeenCalledTimes(3);
+  });
 });

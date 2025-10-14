@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { UserLimitService } from './user-limit-service';
-import { IUserLimitRepository } from '../repositories/user-limit-repository';
-import { EventType } from '../models/events';
-import { UserLimit, LimitStatus, LimitType, LimitPeriod } from '../models/user-limit';
+import { UserLimitService } from '../user-limit-service';
+import { IUserLimitRepository } from '../../repositories/user-limit-repository';
+import { EventType } from '../../models/events';
+import { UserLimit, LimitStatus, LimitType, LimitPeriod } from '../../models/user-limit';
 
 describe('UserLimitService', () => {
   let service: UserLimitService;
