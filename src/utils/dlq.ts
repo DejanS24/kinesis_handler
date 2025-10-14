@@ -1,12 +1,8 @@
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { KinesisStreamRecord } from 'aws-lambda';
-import { Logger } from '@aws-lambda-powertools/logger';
-import { config } from '../config';
+import { createChildLogger } from '../infrastructure/logger';
 
-const logger = new Logger({
-  logLevel: 'INFO',
-  serviceName: 'dlq',
-});
+const logger = createChildLogger({ service: 'dlq' });
 
 export interface DLQMessage {
   originalEvent: KinesisStreamRecord;
@@ -31,13 +27,13 @@ export class DLQHandler {
   private queueUrl: string;
 
   constructor(queueUrl?: string) {
-    this.queueUrl = queueUrl || config.aws.sqs.dlqUrl;
+    this.queueUrl = queueUrl || process.env.DLQ_URL || '';
 
     if (!this.queueUrl) {
-      logger.warn('DLQ URL not configured, DLQ functionality disabled');
+      logger.warn({}, 'DLQ URL not configured, DLQ functionality disabled');
     }
 
-    this.client = new SQSClient({ region: config.aws.region });
+    this.client = new SQSClient({ region: process.env.AWS_REGION || 'us-east-1' });
   }
 
   /**
@@ -50,9 +46,12 @@ export class DLQHandler {
     correlationId?: string
   ): Promise<void> {
     if (!this.queueUrl) {
-      logger.warn('DLQ not configured, cannot send failed record', {
-        eventID: record.eventID,
-      });
+      logger.warn(
+        {
+          eventID: record.eventID,
+        },
+        'DLQ not configured, cannot send failed record'
+      );
       return;
     }
 
@@ -105,19 +104,25 @@ export class DLQHandler {
 
       await this.client.send(command);
 
-      logger.info('Record sent to DLQ', {
-        eventID: record.eventID,
-        sequenceNumber: record.kinesis.sequenceNumber,
-        errorType: error.name,
-        attemptCount,
-        correlationId,
-      });
+      logger.info(
+        {
+          eventID: record.eventID,
+          sequenceNumber: record.kinesis.sequenceNumber,
+          errorType: error.name,
+          attemptCount,
+          correlationId,
+        },
+        'Record sent to DLQ'
+      );
     } catch (dlqError) {
-      logger.error('Failed to send record to DLQ', {
-        eventID: record.eventID,
-        error: dlqError instanceof Error ? dlqError.message : String(dlqError),
-        originalError: error.message,
-      });
+      logger.error(
+        {
+          eventID: record.eventID,
+          error: dlqError instanceof Error ? dlqError.message : String(dlqError),
+          originalError: error.message,
+        },
+        'Failed to send record to DLQ'
+      );
       // Don't throw - we don't want DLQ failures to block processing
     }
   }
@@ -137,7 +142,7 @@ export class DLQHandler {
       return;
     }
 
-    logger.info('Sending batch to DLQ', { count: failures.length });
+    logger.info({ count: failures.length }, 'Sending batch to DLQ');
 
     // Send in parallel with Promise.allSettled to not fail the whole batch
     const results = await Promise.allSettled(
@@ -148,10 +153,13 @@ export class DLQHandler {
 
     const failedCount = results.filter((r) => r.status === 'rejected').length;
     if (failedCount > 0) {
-      logger.error('Some records failed to send to DLQ', {
-        total: failures.length,
-        failed: failedCount,
-      });
+      logger.error(
+        {
+          total: failures.length,
+          failed: failedCount,
+        },
+        'Some records failed to send to DLQ'
+      );
     }
   }
 }

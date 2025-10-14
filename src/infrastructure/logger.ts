@@ -6,6 +6,6 @@ export const logger = pino({
   level: logLevel,
 });
 
-export function createChildLogger(context: Record<string, unknown>) {
+export function createChildLogger(context: Record<string, unknown>): pino.Logger {
   return logger.child(context);
 }

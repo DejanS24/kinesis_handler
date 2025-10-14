@@ -75,9 +75,10 @@ export async function validateEvent(data: unknown): Promise<{
         validatedData = await userLimitResetSchema.validate(data, { abortEarly: false });
         break;
       default:
+        // This should never happen due to validation above, but TypeScript doesn't know that
         return {
           isValid: false,
-          error: `Unknown event type: ${eventType}`,
+          error: `Unknown event type: ${String(eventType)}`,
         };
     }
 

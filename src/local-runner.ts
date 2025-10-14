@@ -1,11 +1,8 @@
-import { config } from 'dotenv';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { KinesisStreamEvent, Context } from 'aws-lambda';
 import { functionHandler } from './index';
 import { logger } from './infrastructure/logger';
-
-config();
 
 async function runLocal(): Promise<void> {
   try {

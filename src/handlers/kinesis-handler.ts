@@ -44,7 +44,7 @@ export interface ProcessingResult {
 export class KinesisHandler {
   constructor(
     private processors: EventProcessor[],
-    private checkpointManager: ICheckpointManager,
+    private checkpointManager: ICheckpointManager | undefined,
     private dlqHandler: DLQHandler
   ) {}
 
@@ -236,6 +236,7 @@ export class KinesisHandler {
 
   private async updateCheckpoint(record: KinesisStreamRecord): Promise<void> {
     try {
+      if (this.checkpointManager == undefined) return;
       // Format: arn:aws:kinesis:region:account:stream/streamName
       const shardId = record.eventSourceARN ?? 'unknown-shard';
 

@@ -37,7 +37,7 @@ export function createMockKinesisRecord(
   };
 
   // Add event-type specific fields
-  let eventPayload: any;
+  let eventPayload: Record<string, string | number>;
 
   if (eventType === EventType.USER_LIMIT_CREATED) {
     eventPayload = {
@@ -178,13 +178,13 @@ export function createFailingUserLimitService(
 } {
   let attemptCount = 0;
 
-  const processEvent = vi.fn().mockImplementation(async () => {
+  const processEvent = vi.fn().mockImplementation(() => {
     attemptCount++;
     if (attemptCount <= failCount) {
       throw new Error(errorMessage);
     }
     // Success after failCount attempts
-    return undefined;
+    return Promise.resolve(undefined);
   });
 
   const mock = {

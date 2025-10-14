@@ -1,3 +1,4 @@
+import { config } from 'dotenv';
 import { KinesisStreamEvent, Context, KinesisStreamBatchResponse } from 'aws-lambda';
 import { UserLimitService } from './user-limit/services/user-limit-service';
 import { createUserLimitRepository } from './user-limit/repositories/repository-factory';
@@ -6,6 +7,8 @@ import { dlqHandler } from './utils/dlq';
 import { KinesisHandler } from './handlers/kinesis-handler';
 import { logger } from './infrastructure/logger';
 import { UserLimitEventProcessor } from './processors/user-limit-event-processor';
+
+config();
 
 const repository = createUserLimitRepository();
 const userLimitService = new UserLimitService(repository);
