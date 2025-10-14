@@ -1,8 +1,6 @@
 import pino from 'pino';
-import { config } from '../config';
 
-
-const logLevel = config.logging.level.toLowerCase();
+const logLevel = (process.env.LOG_LEVEL || 'info').toLowerCase();
 
 export const logger = pino({
   level: logLevel,

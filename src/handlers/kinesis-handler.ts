@@ -8,7 +8,6 @@ import { idempotencyTracker } from '../utils/idempotency';
 import { ICheckpointManager } from '../utils/checkpointing';
 import { DLQHandler } from '../utils/dlq';
 import { retryWithBackoff } from '../utils/retry';
-import { config } from '../config';
 import { logger } from '../infrastructure/logger';
 
 class SkippedRecordError extends Error {
@@ -18,7 +17,10 @@ class SkippedRecordError extends Error {
   }
 }
 
-const limit = pLimit(config.aws.kinesis.concurrency);
+const KINESIS_MAX_CONCURRENCY = parseInt(process.env.KINESIS_MAX_CONCURRENCY || '10', 10);
+const KINESIS_MAX_RETRIES = parseInt(process.env.KINESIS_MAX_RETRIES || '3', 10);
+
+const limit = pLimit(KINESIS_MAX_CONCURRENCY);
 
 export interface ProcessingResult {
   record: KinesisStreamRecord;
@@ -109,7 +111,7 @@ export class KinesisHandler {
           await this.processRecord(record, correlationId);
         },
         {
-          maxAttempts: config.aws.kinesis.maxRetries,
+          maxAttempts: KINESIS_MAX_RETRIES,
         }
       );
 

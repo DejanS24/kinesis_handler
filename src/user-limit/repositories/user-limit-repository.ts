@@ -1,15 +1,12 @@
-import { Logger } from '@aws-lambda-powertools/logger';
 import { UserLimit } from '../models/user-limit';
 import {
   UserLimitNotFoundError,
   UserLimitAlreadyExistsError,
   InvalidUserLimitError,
 } from '../../types/errors';
+import { createChildLogger } from '../../infrastructure/logger';
 
-const logger = new Logger({
-  logLevel: 'INFO',
-  serviceName: 'user-limit-repository',
-});
+const logger = createChildLogger({ service: 'user-limit-repository' });
 
 export interface IUserLimitRepository {
   save(userLimit: UserLimit): Promise<void>;
@@ -27,16 +24,19 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     this.validateUserLimit(userLimit);
 
     if (this.limits.has(userLimit.userLimitId)) {
-      logger.warn('Attempted to save existing UserLimit', { userLimitId: userLimit.userLimitId });
+      logger.warn({ userLimitId: userLimit.userLimitId }, 'Attempted to save existing UserLimit');
       throw new UserLimitAlreadyExistsError(userLimit.userLimitId);
     }
 
     this.limits.set(userLimit.userLimitId, userLimit);
 
-    logger.info('UserLimit saved', {
-      userLimitId: userLimit.userLimitId,
-      userId: userLimit.userId,
-    });
+    logger.info(
+      {
+        userLimitId: userLimit.userLimitId,
+        userId: userLimit.userId,
+      },
+      'UserLimit saved'
+    );
   }
 
   async findById(limitId: string): Promise<UserLimit | null> {
@@ -45,7 +45,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     }
 
     const limit = this.limits.get(limitId);
-    logger.debug('UserLimit lookup by id', { limitId, found: !!limit });
+    logger.debug({ limitId, found: !!limit }, 'UserLimit lookup by id');
     return limit ? limit : null;
   }
 
@@ -56,7 +56,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
 
     const limitIds = this.userIdIndex.get(userId);
     if (!limitIds || limitIds.size === 0) {
-      logger.debug('No UserLimits found for user', { userId });
+      logger.debug({ userId }, 'No UserLimits found for user');
       return [];
     }
 
@@ -66,7 +66,7 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
       if (limit) userLimits.push(limit);
     }
 
-    logger.debug('UserLimits found for user', { userId, count: userLimits.length });
+    logger.debug({ userId, count: userLimits.length }, 'UserLimits found for user');
     return userLimits;
   }
 
@@ -74,18 +74,24 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     this.validateUserLimit(userLimit);
 
     if (!this.limits.has(userLimit.userLimitId)) {
-      logger.warn('Attempted to update non-existent UserLimit', {
-        userLimitId: userLimit.userLimitId,
-      });
+      logger.warn(
+        {
+          userLimitId: userLimit.userLimitId,
+        },
+        'Attempted to update non-existent UserLimit'
+      );
       throw new UserLimitNotFoundError(userLimit.userLimitId);
     }
 
     this.limits.set(userLimit.userLimitId, userLimit);
 
-    logger.info('UserLimit updated', {
-      userLimitId: userLimit.userLimitId,
-      userId: userLimit.userId,
-    });
+    logger.info(
+      {
+        userLimitId: userLimit.userLimitId,
+        userId: userLimit.userId,
+      },
+      'UserLimit updated'
+    );
   }
 
   async delete(limitId: string): Promise<void> {
@@ -95,13 +101,13 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
 
     const limit = this.limits.get(limitId);
     if (!limit) {
-      logger.warn('Attempted to delete non-existent UserLimit', { limitId });
+      logger.warn({ limitId }, 'Attempted to delete non-existent UserLimit');
       throw new UserLimitNotFoundError(limitId);
     }
 
     this.limits.delete(limitId);
 
-    logger.info('UserLimit deleted', { limitId, userId: limit.userId });
+    logger.info({ limitId, userId: limit.userId }, 'UserLimit deleted');
   }
 
   private validateUserLimit(userLimit: UserLimit): void {
