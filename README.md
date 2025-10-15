@@ -1,6 +1,6 @@
 # Kinesis Handler
 
-Production-ready AWS Lambda handler for processing Kinesis stream events in TypeScript.
+AWS Lambda handler for processing Kinesis stream events in TypeScript.
 
 ## Installation & Getting Started
 
@@ -33,9 +33,8 @@ Set environment variables (or use defaults):
 AWS_REGION=us-east-1
 
 # Storage
-REPOSITORY_TYPE=inmemory          # or 'dynamodb'
+REPOSITORY_TYPE=inmemory          # 'dynamodb' not yet implemented
 USER_LIMIT_TABLE_NAME=UserLimits
-STORAGE_TTL=3600                  # seconds
 
 # Logging
 LOG_LEVEL=info                    # debug, info, warn, error
@@ -71,21 +70,15 @@ npm run start:local
 
 ### Core Components
 
-**KinesisHandler** - Main Lambda entry point that orchestrates batch processing. Implements partial batch failure handling, allowing Lambda to automatically retry only the failed records.<br/>
+**KinesisHandler** - Main Lambda entry point that orchestrates batch processing. Returns partial batch failures via `batchItemFailures`, enabling AWS Lambda to retry only failed records when properly configured.<br/>
 **Event Processors** - Pluggable event routing pattern for extensibility. Currently implements `UserLimitEventProcessor`.<br/>
-**Repository Layer** - Separates storage concerns from business logic. In-memory implementation for local testing, DynamoDB for production. `REPOSITORY_TYPE` env var controls the storage backend.
+**Repository Layer** - Separates storage concerns from business logic. In-memory implementation is functional. DynamoDB implementation is stubbed but not yet complete. `REPOSITORY_TYPE` env var controls the storage backend.
 
-
-### AWS Lambda & Kinesis Integration
-
-**Partial Batch Failure Handling** - Returns `batchItemFailures` with sequence numbers to instruct Lambda to retry only failed records, preventing unnecessary reprocessing.<br/>
-**Checkpointing & Retries** - Managed by AWS Kinesis Consumer and Lambda event source mapping. Configure retry behavior and DLQ via Lambda settings.
 
 ### Error Handling
 
 **Validation Errors** - Invalid events are logged and skipped (marked as success) to prevent infinite retries.<br/>
-**Business Logic Errors** - Returned as failures, triggering Lambda's automatic retry mechanism.<br/>
-**Dead Letter Queue** - Configure Lambda Destinations to route permanently failed batches after max retries.
+**Business Logic Errors** - Returned as failures via `batchItemFailures`. When AWS Lambda Event Source Mapping is configured with retry settings, these will be automatically retried by AWS infrastructure (not by application code).<br/>
 
 ### Schema Validation
 
@@ -104,6 +97,16 @@ npm run start:local
 2. **AWS-Native Reliability**: Leverages Lambda's built-in retry, DLQ, and concurrency features
 3. **Extensibility**: Easy to add new event processors
 4. **Observable**: Structured logging with context tracking
+
+## Next Steps
+
+### Not Yet Implemented
+- **DynamoDB Repository** - Complete the `DynamoDBUserLimitRepository` stub implementation
+- **Infrastructure as Code** - Add CloudFormation/Terraform templates for Lambda, Event Source Mapping, and DynamoDB
+- **Dead Letter Queue** - Configure via AWS Lambda Event Source Mapping `DestinationConfig` or implement custom DLQ handling in code
+- **Retry Configuration** - Set `MaximumRetryAttempts`, `BisectBatchOnFunctionError`, and `MaximumRecordAgeInSeconds` via Event Source Mapping
+- **Storage TTL** - Implement automatic expiration of user limits after configured time period
+- **Observability** - Add CloudWatch custom metrics and X-Ray tracing
 
 ## Additional Questions & Answers
 

@@ -64,6 +64,26 @@ describe('KinesisHandler - Batch Processing', () => {
     expect(result.batchItemFailures).toEqual([]);
   });
 
+  it('should separate successes from failures correctly', async () => {
+    // Every 3rd record fails
+    mockProcessors.userLimitService.processEvent.mockImplementation((event: { userLimitId?: string }) => {
+      const limitId = event.userLimitId as string;
+      const index = parseInt(limitId.split('-')[1], 10);
+      if (index % 3 === 0) {
+        throw new Error('Every 3rd fails');
+      }
+      return Promise.resolve();
+    });
+
+    const records = createMockKinesisRecords(9);
+
+    const result = await handler.processBatch(records);
+
+    // Records 0, 3, 6 should fail (3 failures)
+    expect(result.batchItemFailures).toHaveLength(3);
+    expect(result.batchItemFailures.map((f) => f.itemIdentifier)).toEqual(['0', '3', '6']);
+  });
+
   it('should handle empty batch', async () => {
     const records: KinesisStreamRecord[] = [];
 
@@ -71,6 +91,16 @@ describe('KinesisHandler - Batch Processing', () => {
 
     expect(result.batchItemFailures).toEqual([]);
     expect(mockProcessors.userLimitService.processEvent).not.toHaveBeenCalled();
+  });
+
+  it('should handle batch with all failures', async () => {
+    mockProcessors.userLimitService.processEvent.mockRejectedValue(new Error('All fail'));
+
+    const records = createMockKinesisRecords(5);
+
+    const result = await handler.processBatch(records);
+
+    expect(result.batchItemFailures).toHaveLength(5);
   });
 
   it('should process records with different event types', async () => {

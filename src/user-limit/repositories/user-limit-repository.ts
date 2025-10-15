@@ -24,6 +24,12 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     }
 
     this.limits.set(userLimit.userLimitId, userLimit);
+
+    // Update user index for findByUserId queries
+    if (!this.userIdIndex.has(userLimit.userId)) {
+      this.userIdIndex.set(userLimit.userId, new Set());
+    }
+    this.userIdIndex.get(userLimit.userId)!.add(userLimit.userLimitId);
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -78,5 +84,13 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
     }
 
     this.limits.delete(limitId);
+
+    const userLimits = this.userIdIndex.get(limit.userId);
+    if (userLimits) {
+      userLimits.delete(limitId);
+      if (userLimits.size === 0) {
+        this.userIdIndex.delete(limit.userId);
+      }
+    }
   }
 }
