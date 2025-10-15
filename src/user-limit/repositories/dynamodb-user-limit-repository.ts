@@ -23,22 +23,32 @@ export class DynamoDBUserLimitRepository implements IUserLimitRepository {
   }
 
   save(_userLimit: UserLimit): Promise<void> {
-    throw new NotImplementedError('DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory');
+    throw new NotImplementedError(
+      'DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory'
+    );
   }
 
   findById(_limitId: string): Promise<UserLimit | null> {
-    throw new NotImplementedError('DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory');
+    throw new NotImplementedError(
+      'DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory'
+    );
   }
 
   findByUserId(_userId: string): Promise<UserLimit[]> {
-    throw new NotImplementedError('DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory');
+    throw new NotImplementedError(
+      'DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory'
+    );
   }
 
   update(_userLimit: UserLimit): Promise<void> {
-    throw new NotImplementedError('DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory');
+    throw new NotImplementedError(
+      'DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory'
+    );
   }
 
   delete(_limitId: string): Promise<void> {
-    throw new NotImplementedError('DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory');
+    throw new NotImplementedError(
+      'DynamoDBUserLimitRepository not implemented - use REPOSITORY_TYPE=inmemory'
+    );
   }
 }

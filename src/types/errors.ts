@@ -80,7 +80,10 @@ export class SkippedRecordError extends HandlerError {
 }
 
 export class ProcessingError extends HandlerError {
-  constructor(message: string, public readonly originalError?: unknown) {
+  constructor(
+    message: string,
+    public readonly originalError?: unknown
+  ) {
     super(message);
     this.name = 'ProcessingError';
   }

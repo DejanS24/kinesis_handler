@@ -68,7 +68,9 @@ export async function validateEvent(data: unknown): Promise<{
       };
     }
 
-    const validatedData = await schema.validate(data, { abortEarly: false }) as ValidatedEventData;
+    const validatedData = (await schema.validate(data, {
+      abortEarly: false,
+    })) as ValidatedEventData;
 
     return {
       isValid: true,

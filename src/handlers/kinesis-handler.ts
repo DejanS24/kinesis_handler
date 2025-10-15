@@ -84,9 +84,7 @@ export class KinesisHandler {
         return { record, success: true };
       }
 
-      await processor.processEvent(
-        validationResult.validatedData as ValidatedEventData
-      );
+      await processor.processEvent(validationResult.validatedData as ValidatedEventData);
 
       logger.debug({ sequenceNumber, eventType }, 'Record processed successfully');
       return { record, success: true };

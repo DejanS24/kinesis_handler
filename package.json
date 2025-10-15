@@ -5,17 +5,14 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "start": "node dist/local-runner.js",
     "start:local": "npm run build && node dist/local-runner.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "docker:build": "docker build -t kinesis-handler .",
-    "docker:run": "docker run --env-file .env kinesis-handler"
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "keywords": [
     "kinesis",
@@ -23,7 +20,7 @@
     "lambda",
     "typescript"
   ],
-  "author": "",
+  "author": "Dejan Sorgic",
   "license": "ISC",
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",

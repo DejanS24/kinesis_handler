@@ -1,9 +1,9 @@
-import { LimitType } from "./user-limit";
+import { LimitType } from './user-limit';
 
 export enum EventType {
   USER_LIMIT_CREATED = 'USER_LIMIT_CREATED',
   USER_LIMIT_PROGRESS_CHANGED = 'USER_LIMIT_PROGRESS_CHANGED',
-  USER_LIMIT_RESET = 'USER_LIMIT_RESET'
+  USER_LIMIT_RESET = 'USER_LIMIT_RESET',
 }
 
 export interface BaseEvent {

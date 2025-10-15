@@ -37,22 +37,21 @@ describe('KinesisHandler - Batch Processing', () => {
 
   it('should return partial batch failures for failed records', async () => {
     // Records 2 and 4 fail
-    mockProcessors.userLimitService.processEvent.mockImplementation((event: { userLimitId?: string }) => {
-      if (event.userLimitId === 'limit-2' || event.userLimitId === 'limit-4') {
-        throw new Error('Processing failed');
+    mockProcessors.userLimitService.processEvent.mockImplementation(
+      (event: { userLimitId?: string }) => {
+        if (event.userLimitId === 'limit-2' || event.userLimitId === 'limit-4') {
+          throw new Error('Processing failed');
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
-    });
+    );
 
     const records = createMockKinesisRecords(5);
 
     const result = await handler.processBatch(records);
 
     expect(result.batchItemFailures).toHaveLength(2);
-    expect(result.batchItemFailures).toEqual([
-      { itemIdentifier: '2' },
-      { itemIdentifier: '4' },
-    ]);
+    expect(result.batchItemFailures).toEqual([{ itemIdentifier: '2' }, { itemIdentifier: '4' }]);
   });
 
   it('should process large batches correctly', async () => {
@@ -66,14 +65,16 @@ describe('KinesisHandler - Batch Processing', () => {
 
   it('should separate successes from failures correctly', async () => {
     // Every 3rd record fails
-    mockProcessors.userLimitService.processEvent.mockImplementation((event: { userLimitId?: string }) => {
-      const limitId = event.userLimitId as string;
-      const index = parseInt(limitId.split('-')[1], 10);
-      if (index % 3 === 0) {
-        throw new Error('Every 3rd fails');
+    mockProcessors.userLimitService.processEvent.mockImplementation(
+      (event: { userLimitId?: string }) => {
+        const limitId = event.userLimitId as string;
+        const index = parseInt(limitId.split('-')[1], 10);
+        if (index % 3 === 0) {
+          throw new Error('Every 3rd fails');
+        }
+        return Promise.resolve();
       }
-      return Promise.resolve();
-    });
+    );
 
     const records = createMockKinesisRecords(9);
 

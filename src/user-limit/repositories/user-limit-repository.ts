@@ -64,7 +64,6 @@ export class InMemoryUserLimitRepository implements IUserLimitRepository {
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async update(userLimit: UserLimit): Promise<void> {
-
     if (!this.limits.has(userLimit.userLimitId)) {
       throw new UserLimitNotFoundError(userLimit.userLimitId);
     }

@@ -29,9 +29,6 @@ npm run lint
 Set environment variables (or use defaults):
 
 ```bash
-# AWS Configuration
-AWS_REGION=us-east-1
-
 # Storage
 REPOSITORY_TYPE=inmemory          # 'dynamodb' not yet implemented
 USER_LIMIT_TABLE_NAME=UserLimits
@@ -94,9 +91,8 @@ npm run start:local
 ### Design Principles
 
 1. **Separation of Concerns**: Handler, processors, and repositories are decoupled
-2. **AWS-Native Reliability**: Leverages Lambda's built-in retry, DLQ, and concurrency features
-3. **Extensibility**: Easy to add new event processors
-4. **Observable**: Structured logging with context tracking
+2. **Extensibility**: Easy to add new event processors
+3. **Observable**: Structured logging with context tracking
 
 ## Next Steps
 
@@ -111,12 +107,12 @@ npm run start:local
 ## Additional Questions & Answers
 
 1. Q: What did you like about the task and what didn’t? Can we improve it and how?<br />
-A: What I liked the most about this task is the focus on Kinesis, and that I had the opportunity to explore its capabilities - this was the most enjoyable part of the task. As the assignment scenario is matching the use cases from the actual project, it's a very nice introduction to the domain and the technology used. As for improvements, mentioning some more specific business rules in order to guide edge case resolutions could be helpful, but if the idea was to think of those independently, then it's understandable. The freedom to approach design and implementation is nice, although it resulted in some uncertainty with what I should focus on and how far to go with this task.
+A: What I liked the most about this task is the focus on Kinesis and that I had the opportunity to explore its capabilities - this was the most enjoyable part of the task. As the assignment scenario is matching the use cases from the actual project, it's a very nice introduction to the domain and the technology used. As for improvements, mentioning some more specific business rules in order to guide edge case resolutions could be helpful, but if the idea was to think of those independently, then it's understandable. The freedom to approach design and implementation is nice, although it resulted in some uncertainty with what I should focus on and how far to go with this task, resulting in approach revamps.
 2. Q: If you were asked to change it so the `UserLimit` entries are stored on a database
 with a primary goal to provide them back to the front-end for display, which one
 would you suggest and why? What sub-tasks you would see as a necessary if you
 were asked to write a story for such change?<br />
-A: The most obvious one, to suggest, is DynamoDB, for the following reasons:
+A: The most obvious one to suggest is DynamoDB, for the following reasons:
 - Performance - DynamoDB offers single-digit millisecond latency, which is ideal for fast, user-facing queries.
 - Scalability - automatically adapting to the variable traffic patterns, handling major peaks
 - Natural fit with Event Sourcing and stream processing - complementing the existing event-driven design.
@@ -169,4 +165,4 @@ Response: UserLimit[]
 }
 ```
 4. Q: How did/could you implement it so it's possible to re-use it for other similar use cases?<br />
-A: Reusable components can be seen with Processors layer, where we have `event-processor.ts` which enables specific event processors to be registered dynamically. In this project only `UserLimitEventProcessor` is being registered.<br/> Another example is Repository layer impelmentation, where it's made easy to modify storage logic (which database is being used).
+A: Reusable components can be seen with Processors layer, where we have `event-processor.ts` which enables specific event processors to be registered dynamically. In this project only `UserLimitEventProcessor` is being registered<br/> Another example is Repository layer implementation, where it's made easy to modify storage logic (which database is being used).
